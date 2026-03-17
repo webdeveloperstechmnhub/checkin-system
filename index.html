@@ -633,6 +633,121 @@
 
     .toast-close:hover { opacity: 1; }
 
+    /* EVENT PICKER */
+    .event-picker {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 22px 20px;
+      margin-bottom: 20px;
+    }
+
+    .event-picker-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .event-picker-title::before {
+      content: '';
+      width: 3px; height: 13px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    .event-select {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(7,7,15,0.65);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.875rem;
+      font-family: inherit;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .event-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(6,182,212,0.12);
+    }
+
+    .event-select option { background: #0d0d1a; color: var(--text); }
+
+    /* ACTIVE EVENT BANNER */
+    .event-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: rgba(6,182,212,0.07);
+      border: 1px solid rgba(6,182,212,0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      font-size: 0.8rem;
+      color: var(--text-2);
+    }
+
+    .event-banner.active { display: flex; }
+
+    .event-banner-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+      flex-shrink: 0;
+      animation: blink 2.2s ease-in-out infinite;
+    }
+
+    .event-banner-name {
+      flex: 1;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-banner-change {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 5px;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .event-banner-change:hover { color: var(--text); }
+
+    /* WARN badge on participant card */
+    .p-warn {
+      margin: 0 20px 10px;
+      padding: 8px 12px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 8px;
+      font-size: 0.77rem;
+      color: var(--warning);
+      font-weight: 600;
+    }
+
     /* DEBUG ROW */
     .debug-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -671,6 +786,21 @@
         <span id="connLabel">Connecting&hellip;</span>
       </button>
     </header>
+
+    <!-- EVENT PICKER -->
+    <div class="event-picker" id="eventPickerCard">
+      <div class="event-picker-title">Active Event Session</div>
+      <select class="event-select" id="eventSelect" onchange="onEventChange(this)">
+        <option value="">&#x23F3; Loading events&hellip;</option>
+      </select>
+    </div>
+
+    <!-- ACTIVE EVENT BANNER (shown after selection) -->
+    <div class="event-banner" id="eventBanner">
+      <span class="event-banner-dot"></span>
+      <span class="event-banner-name" id="eventBannerName"></span>
+      <button class="event-banner-change" onclick="changeEvent()">Change</button>
+    </div>
 
     <div class="mini-stats">
       <div class="mstat">
@@ -788,6 +918,7 @@
         </div>
       </div>
       <div class="p-details" id="participantDetails"></div>
+      <div id="eventMismatchWarn" class="p-warn" style="display:none;"></div>
       <div class="p-actions">
         <button class="btn btn-success" id="checkInBtn" onclick="checkInParticipant()">&#x2705; Check-In</button>
         <button class="btn btn-secondary" onclick="clearParticipant()">&#x2715; Clear</button>
@@ -808,6 +939,7 @@
     let isScanning = false;
     let captureDevice = null;
     let stats = { total: 0, checkedIn: 0, failed: 0, activity: [] };
+    let selectedEvent = null; // { _id, name, shortName }
 
     /* Stats persistence */
     function loadStats() {
@@ -979,6 +1111,7 @@
 
       var rows = [
         ['Reg ID',    user.registrationId],
+        ['Event',     user.eventShortName || 'N/A'],
         ['Email',     user.email],
         ['Mobile',    user.mobile],
         ['College',   user.college],
@@ -991,6 +1124,15 @@
       document.getElementById('participantDetails').innerHTML = rows.map(function(r) {
         return '<div class="p-row"><span class="p-key">' + esc(r[0]) + '</span><span class="p-val">' + esc(String(r[1])) + '</span></div>';
       }).join('');
+
+      // Show warning if participant belongs to a different event
+      var warnEl = document.getElementById('eventMismatchWarn');
+      if (selectedEvent && user.eventId && user.eventId !== selectedEvent._id) {
+        warnEl.textContent = '\u26A0\uFE0F Registered for a different event: ' + (user.eventShortName || user.eventId);
+        warnEl.style.display = 'block';
+      } else {
+        warnEl.style.display = 'none';
+      }
 
       var btn = document.getElementById('checkInBtn');
       btn.disabled    = checked;
@@ -1082,7 +1224,8 @@
     async function testBackendConnection() {
       setConnStatus(false, 'Testing\u2026');
       try {
-        var res  = await fetch(BACKEND_URL + '/api/checkin/stats');
+        var url  = BACKEND_URL + '/api/checkin/stats' + (selectedEvent ? '?eventId=' + selectedEvent._id : '');
+        var res  = await fetch(url);
         var data = await res.json();
         setConnStatus(true, 'Online');
         showToast('Backend OK \u2014 Total: ' + data.total + ', Checked in: ' + data.checkedIn, 's');
@@ -1125,6 +1268,7 @@
     /* Init */
     window.addEventListener('load', function() {
       loadStats();
+      loadEvents();
       console.log('Backend URL:', BACKEND_URL);
 
       var attempts = 0;
@@ -1143,6 +1287,80 @@
 
       testBackendConnection();
     });
+
+    /* Load events into picker */
+    async function loadEvents() {
+      var sel = document.getElementById('eventSelect');
+      try {
+        var res    = await fetch(BACKEND_URL + '/api/events/public');
+        var events = await res.json();
+        var list   = Array.isArray(events) ? events : [];
+
+        sel.innerHTML = '<option value="">\u2014 Select event session \u2014</option>';
+        list.forEach(function(ev) {
+          var opt = document.createElement('option');
+          opt.value = ev._id;
+          opt.textContent = ev.name + (ev.status === 'closed' ? ' [Closed]' : '');
+          if (ev.status === 'closed') opt.disabled = true;
+          sel.appendChild(opt);
+        });
+
+        // Auto-select if only one active event
+        var active = list.filter(function(e) { return e.status !== 'closed'; });
+        if (active.length === 1) {
+          sel.value = active[0]._id;
+          onEventChange(sel);
+        }
+      } catch (err) {
+        console.error('Failed to load events:', err);
+        sel.innerHTML = '<option value="">\u2014 Could not load events \u2014</option>';
+        showToast('Could not load events from backend', 'e');
+      }
+    }
+
+    /* When user selects an event */
+    function onEventChange(sel) {
+      var id   = sel.value;
+      var name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
+
+      if (!id) {
+        selectedEvent = null;
+        document.getElementById('eventBanner').classList.remove('active');
+        document.getElementById('eventPickerCard').style.display = '';
+        return;
+      }
+
+      selectedEvent = { _id: id, name: name.replace(' [Closed]', '') };
+
+      // Show compact banner, hide the full picker card
+      document.getElementById('eventBannerName').textContent = selectedEvent.name;
+      document.getElementById('eventBanner').classList.add('active');
+      document.getElementById('eventPickerCard').style.display = 'none';
+
+      // Refresh stats for this event
+      refreshEventStats();
+      showToast('Session: ' + selectedEvent.name, 'i', 3000);
+    }
+
+    /* Expand picker again */
+    function changeEvent() {
+      document.getElementById('eventPickerCard').style.display = '';
+      document.getElementById('eventBanner').classList.remove('active');
+      selectedEvent = null;
+    }
+
+    /* Pull live stats filtered by event */
+    async function refreshEventStats() {
+      if (!selectedEvent) return;
+      try {
+        var res  = await fetch(BACKEND_URL + '/api/checkin/stats?eventId=' + selectedEvent._id);
+        var data = await res.json();
+        // Merge server totals into local stats view
+        stats.total     = data.total     || stats.total;
+        stats.checkedIn = data.checkedIn || stats.checkedIn;
+        updateStatsDisplay();
+      } catch (e) { /* silently ignore */ }
+    }
   </script>
 </body>
 </html>
