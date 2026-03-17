@@ -935,11 +935,18 @@
       ? 'http://localhost:5000'
       : 'https://techmnhub-backend-ejf5.onrender.com';
 
+    const JSQR_CDNS = [
+      'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
+      'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js',
+      'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'
+    ];
+
     let currentParticipant = null;
     let isScanning = false;
     let captureDevice = null;
     let stats = { total: 0, checkedIn: 0, failed: 0, activity: [] };
     let selectedEvent = null; // { _id, name, shortName }
+    let qrLibLoadPromise = null;
 
     /* Stats persistence */
     function loadStats() {
@@ -979,11 +986,80 @@
       if (btn) btn.classList.add('active');
     }
 
+    /* QR library loader with CDN fallback */
+    function loadExternalScript(src, timeoutMs) {
+      return new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        var done = false;
+        var timer = setTimeout(function() {
+          if (done) return;
+          done = true;
+          s.remove();
+          reject(new Error('Timeout while loading ' + src));
+        }, timeoutMs || 8000);
+
+        s.src = src;
+        s.async = true;
+        s.onload = function() {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          if (typeof jsQR !== 'undefined') resolve();
+          else reject(new Error('Loaded script but jsQR was not initialized'));
+        };
+        s.onerror = function() {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          reject(new Error('Failed to load ' + src));
+        };
+
+        document.head.appendChild(s);
+      });
+    }
+
+    function ensureQRLibrary() {
+      if (typeof jsQR !== 'undefined') return Promise.resolve();
+      if (qrLibLoadPromise) return qrLibLoadPromise;
+
+      var idx = 0;
+      qrLibLoadPromise = new Promise(function(resolve, reject) {
+        function tryNext() {
+          if (typeof jsQR !== 'undefined') {
+            resolve();
+            return;
+          }
+          if (idx >= JSQR_CDNS.length) {
+            reject(new Error('All jsQR CDNs failed to load'));
+            return;
+          }
+
+          var src = JSQR_CDNS[idx++];
+          loadExternalScript(src, 7000).then(resolve).catch(function(err) {
+            console.warn('jsQR load failed from', src, err.message);
+            tryNext();
+          });
+        }
+        tryNext();
+      }).catch(function(err) {
+        qrLibLoadPromise = null;
+        throw err;
+      });
+
+      return qrLibLoadPromise;
+    }
+
     /* Scanner */
     async function startScanning() {
       if (typeof jsQR === 'undefined') {
-        showToast('QR library still loading \u2014 please wait a moment', 'w');
-        return;
+        showToast('Loading QR scanner library\u2026', 'i', 2500);
+        try {
+          await ensureQRLibrary();
+          showToast('QR scanner ready', 's', 1800);
+        } catch (e) {
+          showToast('QR scanner unavailable \u2014 use the Manual tab', 'e', 7000);
+          return;
+        }
       }
       try {
         showToast('Starting camera\u2026', 'i');
@@ -1238,11 +1314,15 @@
     }
 
     /* Test QR lib */
-    function testQRDetection() {
+    async function testQRDetection() {
       if (typeof jsQR === 'undefined') {
-        showToast('jsQR library not loaded \u2014 try refreshing', 'e');
-        setTimeout(function() { location.reload(); }, 2000);
-        return;
+        showToast('Loading QR library for test\u2026', 'i', 2200);
+        try {
+          await ensureQRLibrary();
+        } catch (e) {
+          showToast('jsQR library not available right now', 'e');
+          return;
+        }
       }
       try {
         var c = document.createElement('canvas');
@@ -1271,19 +1351,13 @@
       loadEvents();
       console.log('Backend URL:', BACKEND_URL);
 
-      var attempts = 0;
-      var checkLib = setInterval(function() {
-        attempts++;
-        if (typeof jsQR !== 'undefined') {
-          clearInterval(checkLib);
-          console.log('jsQR loaded after ' + (attempts * 100) + 'ms');
-          showToast('Check-in app ready!', 's', 3000);
-        } else if (attempts >= 50) {
-          clearInterval(checkLib);
-          console.error('jsQR failed to load');
-          showToast('QR scanner unavailable \u2014 use Manual tab', 'w', 8000);
-        }
-      }, 100);
+      ensureQRLibrary().then(function() {
+        console.log('jsQR loaded successfully');
+        showToast('Check-in app ready!', 's', 3000);
+      }).catch(function(err) {
+        console.error('jsQR failed to load:', err);
+        showToast('QR scanner unavailable \u2014 use Manual tab', 'w', 8000);
+      });
 
       testBackendConnection();
     });
