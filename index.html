@@ -1,998 +1,1148 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zonex 2026 - Check-In System</title>
-  <!-- Try multiple CDN sources for jsQR -->
+  <title>Zonex 2026 — Check-In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
-  <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js" onerror="console.log('Fallback CDN: Loading from unpkg...')"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --bg:           #07070f;
+      --bg2:          #0d0d1a;
+      --surface:      rgba(255,255,255,0.04);
+      --surface-hi:   rgba(255,255,255,0.07);
+      --border:       rgba(255,255,255,0.08);
+      --border-focus: rgba(6,182,212,0.45);
+      --primary:      #06b6d4;
+      --primary-glow: rgba(6,182,212,0.22);
+      --success:      #10b981;
+      --success-glow: rgba(16,185,129,0.22);
+      --error:        #ef4444;
+      --error-glow:   rgba(239,68,68,0.22);
+      --warning:      #f59e0b;
+      --text:         #f1f5f9;
+      --text-2:       #94a3b8;
+      --text-muted:   #475569;
+      --r:    14px;
+      --r-sm:  8px;
+      --r-lg: 20px;
     }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Arial', sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .container {
-      width: 100%;
-      max-width: 600px;
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 90% 55% at 50% -10%, rgba(6,182,212,0.13) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 40% at 85% 85%, rgba(99,102,241,0.07) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
     }
 
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 20px 16px 120px;
+    }
+
+    /* HEADER */
     .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding: 30px;
-      background: rgba(6, 182, 212, 0.1);
-      border-radius: 20px;
-      border: 2px solid rgba(6, 182, 212, 0.3);
-    }
-
-    .header h1 {
-      font-size: 2.5rem;
-      color: #06b6d4;
-      margin-bottom: 10px;
-    }
-
-    .header p {
-      color: #94a3b8;
-      font-size: 1rem;
-    }
-
-    .scanner-section {
-      background: #1e293b;
-      padding: 30px;
-      border-radius: 20px;
-      margin-bottom: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .scanner-section h2 {
-      color: #06b6d4;
-      margin-bottom: 20px;
-      font-size: 1.3rem;
-    }
-
-    #video {
-      width: 100%;
-      border-radius: 10px;
-      border: 3px solid #06b6d4;
-      display: block;
-      margin-bottom: 15px;
-      background: #000;
-    }
-
-    .scanner-controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    button {
-      padding: 12px 24px;
-      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-      border: none;
-      border-radius: 10px;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(6, 182, 212, 0.4);
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-secondary {
-      background: linear-gradient(135deg, #475569 0%, #334155 100%);
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    }
-
-    .manual-input {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-
-    .manual-input input {
-      flex: 1;
-      padding: 12px;
-      background: rgba(15, 23, 42, 0.8);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      color: #fff;
-      font-size: 1rem;
-    }
-
-    .manual-input input:focus {
-      outline: none;
-      border-color: #06b6d4;
-    }
-
-    .manual-input button {
-      padding: 12px 20px;
-    }
-
-    .participant-info {
-      background: #0f172a;
-      padding: 30px;
-      border-radius: 20px;
-      margin-bottom: 20px;
-      border: 2px solid rgba(6, 182, 212, 0.3);
-      display: none;
-    }
-
-    .participant-info.active {
-      display: block;
-      animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .info-header {
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid rgba(6, 182, 212, 0.2);
+      justify-content: space-between;
+      padding: 18px 0 28px;
     }
 
-    .status-badge {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
+    .brand { display: flex; align-items: center; gap: 11px; }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, #06b6d4, #0891b2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 1.25rem;
+      box-shadow: 0 0 22px rgba(6,182,212,0.35), 0 4px 12px rgba(0,0,0,0.4);
+      flex-shrink: 0;
     }
 
-    .status-badge.pending {
-      background: rgba(234, 179, 8, 0.2);
-      border: 2px solid #eab308;
+    .brand-text h1 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1.2;
     }
 
-    .status-badge.checked-in {
-      background: rgba(34, 197, 94, 0.2);
-      border: 2px solid #22c55e;
+    .brand-text p { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+
+    .conn-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 7px 13px;
+      font-size: 0.72rem;
+      color: var(--text-2);
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-family: inherit;
     }
 
-    .status-badge.not-found {
-      background: rgba(239, 68, 68, 0.2);
-      border: 2px solid #ef4444;
+    .conn-pill:hover { background: var(--surface-hi); }
+
+    .conn-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
     }
 
-    .info-text h3 {
-      color: #06b6d4;
+    .conn-dot.online  { background: var(--success); box-shadow: 0 0 8px var(--success); animation: blink 2.2s ease-in-out infinite; }
+    .conn-dot.offline { background: var(--error); }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* MINI STATS */
+    .mini-stats {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .mstat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 10px;
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .mstat:hover { background: var(--surface-hi); border-color: rgba(6,182,212,0.2); }
+
+    .mstat-num {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--primary);
+      line-height: 1;
       margin-bottom: 5px;
     }
 
-    .info-text p {
-      color: #94a3b8;
-      font-size: 0.9rem;
-    }
+    .mstat-num.s { color: var(--success); }
+    .mstat-num.e { color: var(--error); }
 
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .detail-row:last-child {
-      border-bottom: none;
-    }
-
-    .detail-label {
-      color: #94a3b8;
+    .mstat-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       font-weight: 600;
     }
 
-    .detail-value {
-      color: #fff;
-      font-weight: bold;
-    }
-
-    .action-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .alert {
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      display: none;
-      animation: fadeIn 0.3s;
-    }
-
-    .alert.active {
-      display: block;
-    }
-
-    .alert-success {
-      background: rgba(34, 197, 94, 0.2);
-      border: 2px solid #22c55e;
-      color: #22c55e;
-    }
-
-    .alert-error {
-      background: rgba(239, 68, 68, 0.2);
-      border: 2px solid #ef4444;
-      color: #ef4444;
-    }
-
-    .alert-info {
-      background: rgba(6, 182, 212, 0.2);
-      border: 2px solid #06b6d4;
-      color: #06b6d4;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      border: 2px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .stat-number {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #06b6d4;
-      margin-bottom: 5px;
-    }
-
-    .stat-label {
-      color: #94a3b8;
-      font-size: 0.9rem;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 20px;
-    }
-
-    .spinner {
-      border: 4px solid rgba(6, 182, 212, 0.2);
-      border-top: 4px solid #06b6d4;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
+    /* TABS */
     .tabs {
       display: flex;
-      gap: 10px;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
       margin-bottom: 20px;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     }
 
     .tab-btn {
-      padding: 12px 20px;
+      flex: 1;
+      padding: 10px 6px;
       background: transparent;
       border: none;
-      border-bottom: 3px solid transparent;
-      color: #94a3b8;
+      border-radius: 9px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.18s;
+      font-family: inherit;
+      white-space: nowrap;
     }
 
     .tab-btn.active {
-      border-bottom-color: #06b6d4;
-      color: #06b6d4;
+      background: rgba(6,182,212,0.13);
+      color: var(--primary);
+      box-shadow: inset 0 0 0 1px rgba(6,182,212,0.28);
     }
 
-    .tab-content {
+    .tab-btn:hover:not(.active) { color: var(--text-2); background: var(--surface-hi); }
+
+    .tab-content { display: none; animation: fadeUp 0.22s ease; }
+    .tab-content.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(7px); }
+      to   { opacity: 1; transform: translateY(0);   }
+    }
+
+    /* CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 22px 20px;
+      margin-bottom: 14px;
+      backdrop-filter: blur(12px);
+    }
+
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      width: 3px; height: 13px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    /* SCANNER */
+    .scan-idle {
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 42px 20px;
+      text-align: center;
+      margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .scan-idle:hover { border-color: rgba(6,182,212,0.25); }
+    .scan-idle-icon { font-size: 3.2rem; margin-bottom: 12px; line-height: 1; }
+    .scan-idle h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+    .scan-idle p  { font-size: 0.8rem; color: var(--text-muted); }
+
+    .scan-viewport {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      margin-bottom: 14px;
+      aspect-ratio: 1;
       display: none;
     }
 
-    .tab-content.active {
-      display: block;
+    .scan-viewport.active { display: block; }
+
+    #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .scan-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.25);
     }
 
-    @media (max-width: 768px) {
-      .header h1 {
-        font-size: 1.8rem;
-      }
+    .scan-frame { width: 60%; aspect-ratio: 1; position: relative; }
 
-      .stats {
-        grid-template-columns: 1fr;
-      }
+    .sf-tl, .sf-tr, .sf-br, .sf-bl {
+      position: absolute;
+      width: 26px; height: 26px;
+      border-color: var(--primary);
+      border-style: solid;
+    }
 
-      .scanner-controls {
-        grid-template-columns: 1fr;
-      }
+    .sf-tl { top:0; left:0;  border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
+    .sf-tr { top:0; right:0; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
+    .sf-br { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+    .sf-bl { bottom:0; left:0;  border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
 
-      .action-buttons {
-        grid-template-columns: 1fr;
-      }
+    .scan-line {
+      position: absolute;
+      left: 4%; right: 4%; top: 6%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      border-radius: 1px;
+      box-shadow: 0 0 12px var(--primary), 0 0 4px rgba(6,182,212,0.5);
+      animation: scanAnim 2.6s ease-in-out infinite;
+    }
+
+    @keyframes scanAnim {
+      0%   { top: 6%;  opacity: 1; }
+      46%  { top: 90%; opacity: 1; }
+      50%  { opacity: 0.2; }
+      54%  { top: 6%;  opacity: 0.2; }
+      58%  { opacity: 1; }
+      100% { top: 6%;  opacity: 1; }
+    }
+
+    .scan-hint {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(6,182,212,0.25);
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    /* BTN ROW */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 11px 18px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(6,182,212,0.28);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(6,182,212,0.45);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface-hi);
+      border-color: var(--border-focus);
+      color: var(--text);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(16,185,129,0.28);
+    }
+
+    .btn-success:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(16,185,129,0.45);
+    }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: var(--error);
+    }
+
+    .btn-danger:hover:not(:disabled) { background: rgba(239,68,68,0.18); }
+
+    .btn-full { width: 100%; }
+
+    /* INPUTS */
+    .field { position: relative; margin-bottom: 12px; }
+
+    .field-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      background: rgba(7,7,15,0.65);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.875rem;
+      font-family: inherit;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .input::placeholder { color: var(--text-muted); }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(6,182,212,0.12);
+    }
+
+    .input-row { display: flex; gap: 8px; align-items: flex-start; }
+    .input-row .field { flex: 1; margin-bottom: 0; }
+
+    /* DIVIDER */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* PARTICIPANT CARD */
+    .p-card {
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      margin-bottom: 14px;
+      display: none;
+      animation: slideUp 0.28s ease;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .p-card.active { display: block; }
+    .p-card.st-pending { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.03); }
+    .p-card.st-checked { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.03); }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    .p-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 20px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .p-avatar {
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      letter-spacing: -0.03em;
+    }
+
+    .p-avatar.pending { background: rgba(245,158,11,0.14); border: 2px solid rgba(245,158,11,0.35); color: var(--warning); }
+    .p-avatar.checked { background: rgba(16,185,129,0.14); border: 2px solid rgba(16,185,129,0.35); color: var(--success); }
+
+    .p-meta h3 { font-size: 1rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+
+    .p-meta .p-status { font-size: 0.75rem; font-weight: 600; margin-top: 3px; }
+    .p-status.pending { color: var(--warning); }
+    .p-status.checked { color: var(--success); }
+
+    .p-details { padding: 4px 20px; }
+
+    .p-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      gap: 16px;
+    }
+
+    .p-row:last-child { border-bottom: none; }
+
+    .p-key {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+
+    .p-val { font-size: 0.85rem; font-weight: 600; color: var(--text); text-align: right; word-break: break-word; }
+
+    .p-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 20px 18px;
+    }
+
+    /* ACTIVITY LOG */
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .activity-list::-webkit-scrollbar { width: 3px; }
+    .activity-list::-webkit-scrollbar-track { background: transparent; }
+    .activity-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .a-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-left-width: 3px;
+      border-radius: var(--r-sm);
+    }
+
+    .a-item.ok  { border-left-color: var(--success); }
+    .a-item.err { border-left-color: var(--error);   }
+
+    .a-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .a-dot.ok  { background: var(--success); }
+    .a-dot.err { background: var(--error); }
+
+    .a-body { flex: 1; min-width: 0; }
+    .a-name { font-size: 0.83rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .a-time { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+    .empty-state { text-align: center; padding: 32px; color: var(--text-muted); font-size: 0.82rem; }
+    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 10px; filter: grayscale(0.4); }
+
+    /* SPINNER */
+    .spin {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spinR 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spinR { to { transform: rotate(360deg); } }
+
+    /* TOAST */
+    .toasts {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+      z-index: 9000;
+      width: calc(100% - 32px);
+      max-width: 480px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 13px 15px;
+      border-radius: 12px;
+      font-size: 0.855rem;
+      font-weight: 500;
+      backdrop-filter: blur(20px);
+      animation: toastIn 0.28s cubic-bezier(.22,1,.36,1);
+      pointer-events: all;
+      border: 1px solid transparent;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    }
+
+    .toast.out { animation: toastOut 0.22s ease forwards; }
+
+    @keyframes toastIn  { from { opacity:0; transform:translateY(14px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes toastOut { to   { opacity:0; transform:translateY(8px) scale(.97);  } }
+
+    .toast-s { background:rgba(16,185,129,0.14);  border-color:rgba(16,185,129,0.3); color:#6ee7b7; }
+    .toast-e { background:rgba(239,68,68,0.14);   border-color:rgba(239,68,68,0.3);  color:#fca5a5; }
+    .toast-i { background:rgba(6,182,212,0.12);   border-color:rgba(6,182,212,0.3);  color:#67e8f9; }
+    .toast-w { background:rgba(245,158,11,0.12);  border-color:rgba(245,158,11,0.3); color:#fcd34d; }
+
+    .toast-ico { font-size: 1.05rem; flex-shrink: 0; line-height: 1.4; }
+    .toast-msg { flex: 1; line-height: 1.4; }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: inherit;
+      opacity: 0.6;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0;
+      flex-shrink: 0;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+
+    .toast-close:hover { opacity: 1; }
+
+    /* DEBUG ROW */
+    .debug-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* RESPONSIVE */
+    @media (max-width: 399px) {
+      .mini-stats { gap: 7px; }
+      .mstat { padding: 12px 7px; }
+      .mstat-num { font-size: 1.55rem; }
+      .p-actions { grid-template-columns: 1fr; }
+      .btn-row { grid-template-columns: 1fr; }
+      .debug-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+
   <script>
-    // Diagnostic check - must be served via HTTP
     if (window.location.protocol === 'file:') {
-      document.body.innerHTML = `
-        <div style="padding: 40px; text-align: center; color: #ef4444; font-family: Arial; background: #0f172a;">
-          <h1 style="color: #ef4444;">❌ Error: File Protocol Not Allowed</h1>
-          <p style="color: #94a3b8; margin: 20px 0; font-size: 16px;">This app must be opened via HTTP (localhost:8080), not as a local file!</p>
-          <hr style="border: 1px solid #333; margin: 30px 0;">
-          <p style="color: #94a3b8; margin: 15px 0;"><strong>To fix this:</strong></p>
-          <p style="background: #1e293b; padding: 15px; border-radius: 5px; font-family: monospace; color: #06b6d4; margin: 15px 0; text-align: left;">
-            cd checkin<br>python -m http.server 8080
-          </p>
-          <p style="color: #94a3b8; margin: 20px 0; font-size: 16px;">Then open your browser and go to:</p>
-          <p style="background: #1e293b; padding: 10px; border-radius: 5px; font-family: monospace; color: #06b6d4; font-size: 18px;">
-            http://localhost:8080
-          </p>
-        </div>
-      `;
-      throw new Error('Must use HTTP, not file protocol');
+      document.body.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#07070f;font-family:system-ui,sans-serif;"><div style="max-width:400px;text-align:center;"><div style="width:60px;height:60px;background:rgba(239,68,68,0.12);border:2px solid rgba(239,68,68,0.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 20px;">&#x1F6AB;</div><h2 style="color:#f1f5f9;font-size:1.2rem;margin-bottom:10px;font-weight:700;">HTTP Required</h2><p style="color:#64748b;margin-bottom:22px;font-size:0.875rem;">This app must be served over HTTP, not opened as a local file.</p><div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;font-family:monospace;color:#06b6d4;font-size:0.82rem;text-align:left;line-height:1.7;">cd checkin<br>python -m http.server 8080</div><p style="color:#94a3b8;margin:14px 0 6px;font-size:0.82rem;">Then navigate to:</p><code style="color:#06b6d4;font-size:0.95rem;">http://localhost:8080</code></div></div>';
+      throw new Error('Must use HTTP protocol');
     }
   </script>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <h1>✅ ZONEX 2026</h1>
-      <p>Participant Check-In System</p>
+
+  <div class="app">
+
+    <header class="header">
+      <div class="brand">
+        <div class="brand-logo">&#x2705;</div>
+        <div class="brand-text">
+          <h1>Zonex 2026</h1>
+          <p>Check-In System</p>
+        </div>
+      </div>
+      <button class="conn-pill" onclick="testBackendConnection()" title="Click to test connection">
+        <span class="conn-dot" id="connDot"></span>
+        <span id="connLabel">Connecting&hellip;</span>
+      </button>
+    </header>
+
+    <div class="mini-stats">
+      <div class="mstat">
+        <div class="mstat-num"   id="statTotal">0</div>
+        <div class="mstat-label">Scanned</div>
+      </div>
+      <div class="mstat">
+        <div class="mstat-num s" id="statCheckedIn">0</div>
+        <div class="mstat-label">Checked In</div>
+      </div>
+      <div class="mstat">
+        <div class="mstat-num e" id="statFailed">0</div>
+        <div class="mstat-label">Failed</div>
+      </div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('scanner')">🎥 Scanner</button>
-      <button class="tab-btn" onclick="switchTab('manual')">⌨️ Manual</button>
-      <button class="tab-btn" onclick="switchTab('stats')">📊 Stats</button>
+      <button class="tab-btn active" onclick="switchTab('scanner',this)">&#x1F4F7; Scanner</button>
+      <button class="tab-btn"        onclick="switchTab('manual',this)">&#x2328;&#xFE0F; Manual</button>
+      <button class="tab-btn"        onclick="switchTab('stats',this)">&#x1F4CA; Stats</button>
     </div>
 
-    <!-- Alert -->
-    <div id="alert" class="alert"></div>
-
-    <!-- Scanner Tab -->
+    <!-- SCANNER TAB -->
     <div id="scanner" class="tab-content active">
-      <div class="scanner-section">
-        <h2>📱 Scan QR Code</h2>
-        
-        <div class="scanner-controls">
-          <button onclick="startScanning()">🎥 Start Scanner</button>
-          <button onclick="stopScanning()" class="btn-secondary">⏹️ Stop Scanner</button>
-        </div>
 
-        <video id="video" style="display: none;"></video>
-        <canvas id="canvas" style="display: none;"></canvas>
+      <div id="scanIdle" class="scan-idle">
+        <div class="scan-idle-icon">&#x1F4F1;</div>
+        <h3>Ready to Scan</h3>
+        <p>Point camera at participant&rsquo;s QR ticket</p>
+      </div>
 
-        <div class="manual-input">
-          <input 
-            type="text" 
-            id="qrInput" 
-            placeholder="Or paste Registration ID here..." 
-            onkeypress="if(event.key==='Enter') verifyTicket(this.value)"
-          >
-          <button onclick="verifyTicket(document.getElementById('qrInput').value)">Verify</button>
+      <div id="scanViewport" class="scan-viewport">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <div class="scan-overlay">
+          <div class="scan-frame">
+            <span class="sf-tl"></span>
+            <span class="sf-tr"></span>
+            <span class="sf-br"></span>
+            <span class="sf-bl"></span>
+            <div class="scan-line"></div>
+          </div>
         </div>
+        <div class="scan-hint">Align QR code within the frame</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary"   onclick="startScanning()">&#x1F3A5; Start Camera</button>
+        <button class="btn btn-secondary" onclick="stopScanning()">&#x23F8; Stop</button>
+      </div>
+
+      <div class="divider">or enter ID manually</div>
+
+      <div class="input-row">
+        <div class="field">
+          <span class="field-icon">&#x1F50D;</span>
+          <input class="input" type="text" id="qrInput"
+            placeholder="Paste Registration ID&hellip;"
+            onkeypress="if(event.key==='Enter') verifyTicket(this.value)">
+        </div>
+        <button class="btn btn-primary" onclick="verifyTicket(document.getElementById('qrInput').value)">Verify</button>
       </div>
     </div>
 
-    <!-- Manual Tab -->
+    <!-- MANUAL TAB -->
     <div id="manual" class="tab-content">
-      <div class="scanner-section">
-        <h2>⌨️ Manual Registration ID Entry</h2>
-        
-        <input 
-          type="text" 
-          id="manualRegId" 
-          placeholder="Enter Registration ID (e.g., ZNX2026-123456)" 
-          style="width: 100%; padding: 12px; background: rgba(15,23,42,0.8); border: 2px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; margin-bottom: 15px; font-size: 1rem;"
-        >
-        <button onclick="verifyTicket(document.getElementById('manualRegId').value)">Verify & Check-In</button>
+      <div class="card">
+        <div class="card-title">Manual ID Entry</div>
+        <div class="field">
+          <span class="field-icon">&#x1FAA4;</span>
+          <input class="input" type="text" id="manualRegId"
+            placeholder="e.g. ZNX2026-123456"
+            onkeypress="if(event.key==='Enter') verifyTicket(this.value)">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="verifyTicket(document.getElementById('manualRegId').value)">
+          Verify &amp; Check-In
+        </button>
       </div>
     </div>
 
-    <!-- Stats Tab -->
+    <!-- STATS TAB -->
     <div id="stats" class="tab-content">
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-number" id="statTotal">0</div>
-          <div class="stat-label">Total Scanned</div>
+      <div class="card">
+        <div class="card-title">Recent Activity</div>
+        <div class="activity-list" id="activityLog">
+          <div class="empty-state">
+            <div class="empty-icon">&#x1F4CB;</div>
+            No activity yet &mdash; scan a ticket to begin
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number" id="statCheckedIn">0</div>
-          <div class="stat-label">Checked In</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="statFailed">0</div>
-          <div class="stat-label">Failed</div>
+        <div style="margin-top:14px;">
+          <button class="btn btn-danger btn-full" onclick="clearStats()">Clear All Stats</button>
         </div>
       </div>
 
-      <div class="scanner-section">
-        <h2>📋 Recent Activity</h2>
-        <div id="activityLog" style="max-height: 300px; overflow-y: auto; background: #0f172a; padding: 15px; border-radius: 10px;"></div>
-        <button onclick="clearStats()" class="btn-danger" style="margin-top: 15px; width: 100%;">Clear Stats</button>
-      </div>
-
-      <div class="scanner-section">
-        <h2>🧪 Debug Tools</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;">Test API connection and system status</p>
-        <button onclick="testBackendConnection()" style="width: 100%; margin-bottom: 10px;">🔗 Test Backend Connection</button>
-        <button onclick="testQRDetection()" style="width: 100%;">📸 Test QR Detection</button>
+      <div class="card">
+        <div class="card-title">Debug Tools</div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">
+          Test API reachability and scanner library status.
+        </p>
+        <div class="debug-row">
+          <button class="btn btn-secondary" onclick="testBackendConnection()">&#x1F517; Test API</button>
+          <button class="btn btn-secondary" onclick="testQRDetection()">&#x1F4F8; Test QR Lib</button>
+        </div>
       </div>
     </div>
 
-    <!-- Participant Info (shown when verified) -->
-    <div id="participantInfo" class="participant-info">
-      <div class="info-header">
-        <div class="status-badge" id="statusBadge"></div>
-        <div class="info-text">
-          <h3 id="participantName">-</h3>
-          <p id="participantStatus">-</p>
+    <!-- PARTICIPANT CARD -->
+    <div id="participantInfo" class="p-card">
+      <div class="p-head">
+        <div class="p-avatar" id="participantAvatar"></div>
+        <div class="p-meta">
+          <h3 id="participantName">&mdash;</h3>
+          <p class="p-status" id="participantStatus">&mdash;</p>
         </div>
       </div>
-
-      <div id="participantDetails"></div>
-
-      <div class="action-buttons">
-        <button onclick="checkInParticipant()" id="checkInBtn">✅ Check-In</button>
-        <button onclick="clearParticipant()" class="btn-secondary">Clear</button>
+      <div class="p-details" id="participantDetails"></div>
+      <div class="p-actions">
+        <button class="btn btn-success" id="checkInBtn" onclick="checkInParticipant()">&#x2705; Check-In</button>
+        <button class="btn btn-secondary" onclick="clearParticipant()">&#x2715; Clear</button>
       </div>
     </div>
+
   </div>
 
+  <div class="toasts" id="toastContainer"></div>
+
   <script>
-    const BACKEND_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:5000'  // Local testing
-      : 'https://techmnhub-backend-ejf5.onrender.com'; // Production
+    /* Config */
+    const BACKEND_URL = window.location.hostname === 'localhost'
+      ? 'http://localhost:5000'
+      : 'https://techmnhub-backend-ejf5.onrender.com';
+
     let currentParticipant = null;
     let isScanning = false;
     let captureDevice = null;
+    let stats = { total: 0, checkedIn: 0, failed: 0, activity: [] };
 
-    // Stats
-    let stats = {
-      total: 0,
-      checkedIn: 0,
-      failed: 0,
-      activity: []
-    };
-
-    // Load stats from localStorage
+    /* Stats persistence */
     function loadStats() {
-      const saved = localStorage.getItem('checkinStats');
-      if (saved) {
-        stats = JSON.parse(saved);
-        updateStatsDisplay();
-      }
+      try {
+        const saved = localStorage.getItem('checkinStats');
+        if (saved) { stats = JSON.parse(saved); updateStatsDisplay(); }
+      } catch (e) { /* ignore */ }
     }
 
-    // Save stats to localStorage
     function saveStats() {
       localStorage.setItem('checkinStats', JSON.stringify(stats));
       updateStatsDisplay();
     }
 
-    // Update stats display
     function updateStatsDisplay() {
-      document.getElementById('statTotal').textContent = stats.total;
+      document.getElementById('statTotal').textContent     = stats.total;
       document.getElementById('statCheckedIn').textContent = stats.checkedIn;
-      document.getElementById('statFailed').textContent = stats.failed;
+      document.getElementById('statFailed').textContent    = stats.failed;
 
-      const activityDiv = document.getElementById('activityLog');
-      activityDiv.innerHTML = stats.activity
-        .slice(-20) // Last 20 activities
-        .reverse()
-        .map(item => `<p style="font-size: 0.9rem; margin-bottom: 8px; padding: 8px; background: rgba(6,182,212,0.1); border-left: 3px solid ${item.success ? '#22c55e' : '#ef4444'}; border-radius: 5px;">
-          <strong>${item.name || item.id}</strong><br>
-          <span style="color: #94a3b8; font-size: 0.8rem;">${item.time}</span>
-        </p>`)
-        .join('');
+      const log = document.getElementById('activityLog');
+      if (!stats.activity.length) {
+        log.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F4CB;</div>No activity yet &mdash; scan a ticket to begin</div>';
+        return;
+      }
+
+      log.innerHTML = [...stats.activity].slice(-30).reverse().map(function(item) {
+        var cls = item.success ? 'ok' : 'err';
+        return '<div class="a-item ' + cls + '"><span class="a-dot ' + cls + '"></span><div class="a-body"><div class="a-name">' + esc(item.name || item.id) + '</div><div class="a-time">' + esc(item.time) + '</div></div></div>';
+      }).join('');
     }
 
-    // Switch tabs
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      
-      document.getElementById(tabName).classList.add('active');
-      event.target.classList.add('active');
+    /* Tabs */
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
+      document.getElementById(name).classList.add('active');
+      if (btn) btn.classList.add('active');
     }
 
-    // Start camera scanning
+    /* Scanner */
     async function startScanning() {
+      if (typeof jsQR === 'undefined') {
+        showToast('QR library still loading \u2014 please wait a moment', 'w');
+        return;
+      }
       try {
-        // Check if jsQR library is available - if not, wait a bit more
-        if (typeof jsQR === 'undefined') {
-          showAlert('📡 QR library still loading... Please wait 2 seconds', 'info');
-          console.warn('jsQR not loaded yet, waiting...');
-          
-          // Wait up to 3 seconds for library to load
-          let waited = 0;
-          const waitForLibrary = setInterval(() => {
-            waited += 100;
-            if (typeof jsQR !== 'undefined') {
-              clearInterval(waitForLibrary);
-              startScanning(); // Retry
-              return;
-            }
-            if (waited >= 3000) {
-              clearInterval(waitForLibrary);
-              showAlert('❌ QR library failed to load from CDN. Using Manual tab for now.', 'error');
-              console.error('After 3 seconds, jsQR still not loaded');
-            }
-          }, 100);
-          return;
-        }
-
-        showAlert('📷 Starting camera...', 'info');
-        
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
+        showToast('Starting camera\u2026', 'i');
+        var stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-
-        const video = document.getElementById('video');
+        var video = document.getElementById('video');
         video.srcObject = stream;
-        video.style.display = 'block';
         video.play();
-
         isScanning = true;
         captureDevice = stream;
-        
-        showAlert('🎯 Camera ready! Point at QR code', 'info');
-        console.log('✅ Camera started successfully');
-        console.log('📸 Device:', stream.getVideoTracks()[0].label);
-        console.log('📋 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
-        
+        document.getElementById('scanIdle').style.display = 'none';
+        document.getElementById('scanViewport').classList.add('active');
+        showToast('Camera ready \u2014 align the QR code', 'i');
         scanQR();
       } catch (error) {
         console.error('Camera error:', error);
-        
         if (error.name === 'NotAllowedError') {
-          showAlert('❌ Camera permission denied. Enable in browser settings.', 'error');
+          showToast('Camera permission denied \u2014 enable in browser settings', 'e');
         } else if (error.name === 'NotFoundError') {
-          showAlert('❌ No camera found. Use Manual tab instead.', 'error');
+          showToast('No camera found \u2014 use the Manual tab', 'e');
         } else {
-          showAlert(`❌ Camera error: ${error.message}. Use manual entry.`, 'error');
+          showToast('Camera error: ' + error.message, 'e');
         }
       }
     }
 
-    // Stop camera
     function stopScanning() {
       isScanning = false;
-      if (captureDevice) {
-        captureDevice.getTracks().forEach(track => track.stop());
-      }
-      const video = document.getElementById('video');
-      video.style.display = 'none';
-      showAlert('Scanner stopped', 'info');
+      if (captureDevice) captureDevice.getTracks().forEach(function(t) { t.stop(); });
+      captureDevice = null;
+      var video = document.getElementById('video');
+      video.srcObject = null;
+      document.getElementById('scanViewport').classList.remove('active');
+      document.getElementById('scanIdle').style.display = '';
+      showToast('Scanner stopped', 'i');
     }
 
-    // Scan QR code from video
     function scanQR() {
-      const video = document.getElementById('video');
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
-      let frameCount = 0;
-      let detectionAttempts = 0;
-      let consecutiveFailures = 0;
+      if (typeof jsQR === 'undefined') { showToast('QR library not available \u2014 use Manual tab', 'e'); return; }
+      var video  = document.getElementById('video');
+      var canvas = document.getElementById('canvas');
+      var ctx    = canvas.getContext('2d');
+      var frames = 0;
 
-      // Check if jsQR library is loaded
-      if (typeof jsQR === 'undefined') {
-        showAlert('⚠️ QR Scanner library failed to load. Using manual entry.', 'error');
-        console.error('jsQR library not loaded from CDN');
-        return;
-      }
-
-      const scan = () => {
+      function scan() {
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          frameCount++;
-          
-          // Process every frame for better detection
+          canvas.width  = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
           try {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            
-            // Try multiple detection strategies
-            let code = null;
-            
-            // Strategy 1: Attempt both inverted and normal
-            code = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth'
-            });
-
+            var img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
             if (code && code.data) {
-              const qrData = code.data;
-              console.log('✅ QR detected:', qrData);
-              showAlert('✅ QR Code detected!', 'success');
-              verifyTicket(qrData);
+              showToast('QR code detected!', 's');
+              verifyTicket(code.data);
               stopScanning();
               return;
             }
-            
-            consecutiveFailures++;
-            detectionAttempts++;
-            
-            // Log progress every 30 frames (~1 second)
-            if (detectionAttempts % 30 === 0) {
-              console.log(`📸 Scanning... (${Math.floor(detectionAttempts / 30)} seconds) - Frame size: ${canvas.width}x${canvas.height}`);
-            }
-          } catch (e) {
-            console.error('QR scan error:', e);
-          }
+            frames++;
+            if (frames % 90 === 0) console.log('Scanning\u2026 ' + Math.floor(frames/30) + 's \u2013 ' + canvas.width + '\u00d7' + canvas.height);
+          } catch (e) { console.error('Scan frame error:', e); }
         }
-
-        if (isScanning) {
-          requestAnimationFrame(scan);
-        }
-      };
-
-      console.log('🎬 QR Scanner starting... Point camera at QR code');
-      console.log('📋 Library check:', typeof jsQR !== 'undefined' ? '✅ jsQR ready' : '❌ jsQR missing');
+        if (isScanning) requestAnimationFrame(scan);
+      }
       scan();
     }
 
-    // Verify ticket with backend
+    /* Verify ticket */
     async function verifyTicket(registrationId) {
       if (!registrationId || registrationId.trim() === '') {
-        showAlert('Please enter or scan a Registration ID', 'error');
+        showToast('Please enter or scan a Registration ID', 'w');
         return;
       }
-
       registrationId = registrationId.trim().toUpperCase();
-      
-      console.log('🔍 Verifying:', registrationId);
-      
+      console.log('Verifying:', registrationId);
       try {
-        showAlert('Verifying...', 'info');
-        
-        const response = await fetch(`${BACKEND_URL}/api/checkin/verify`, {
+        showToast('Verifying registration\u2026', 'i');
+        var res  = await fetch(BACKEND_URL + '/api/checkin/verify', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ registrationId })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ registrationId: registrationId })
         });
-
-        console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Response data:', data);
-
-        if (response.ok) {
+        var data = await res.json();
+        if (res.ok) {
           currentParticipant = data.user;
           displayParticipantInfo(data.user);
-          showAlert(`✅ Found: ${data.user.fullName}`, 'success');
-          
+          showToast('Found: ' + data.user.fullName, 's');
           stats.total++;
-          stats.activity.push({
-            id: registrationId,
-            name: data.user.fullName,
-            success: true,
-            time: new Date().toLocaleTimeString()
-          });
+          stats.activity.push({ id: registrationId, name: data.user.fullName, success: true, time: new Date().toLocaleTimeString() });
         } else {
-          showAlert(`❌ ${data.msg || 'Ticket not found'}`, 'error');
+          showToast(data.msg || 'Ticket not found', 'e');
           currentParticipant = null;
           document.getElementById('participantInfo').classList.remove('active');
-          
           stats.total++;
           stats.failed++;
-          stats.activity.push({
-            id: registrationId,
-            name: data.msg || 'Not found',
-            success: false,
-            time: new Date().toLocaleTimeString()
-          });
+          stats.activity.push({ id: registrationId, name: data.msg || 'Not found', success: false, time: new Date().toLocaleTimeString() });
         }
-
         saveStats();
-        document.getElementById('qrInput').value = '';
+        document.getElementById('qrInput').value     = '';
         document.getElementById('manualRegId').value = '';
-
       } catch (error) {
         console.error('Verification error:', error);
-        showAlert(`Connection error: ${error.message}`, 'error');
+        showToast('Connection error: ' + error.message, 'e');
         currentParticipant = null;
         document.getElementById('participantInfo').classList.remove('active');
       }
     }
 
-    // Display participant information
+    /* Display participant */
     function displayParticipantInfo(user) {
-      const isCheckedIn = user.checkedIn;
-      
-      let statusBadge = document.getElementById('statusBadge');
-      let statusClass = isCheckedIn ? 'checked-in' : 'pending';
-      statusBadge.className = `status-badge ${statusClass}`;
-      statusBadge.textContent = isCheckedIn ? '✅' : '⏳';
+      var checked  = user.checkedIn;
+      var card     = document.getElementById('participantInfo');
+      var avatar   = document.getElementById('participantAvatar');
+      var initials = (user.fullName || '?').split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
+
+      card.className   = 'p-card active ' + (checked ? 'st-checked' : 'st-pending');
+      avatar.className = 'p-avatar ' + (checked ? 'checked' : 'pending');
+      avatar.textContent = initials;
 
       document.getElementById('participantName').textContent = user.fullName;
-      document.getElementById('participantStatus').textContent = isCheckedIn ? 'Already Checked In' : 'Pending Check-In';
+      var statusEl = document.getElementById('participantStatus');
+      statusEl.className   = 'p-status ' + (checked ? 'checked' : 'pending');
+      statusEl.textContent = checked ? '\u2705 Already Checked In' : '\u23F3 Pending Check-In';
 
-      const detailsHTML = `
-        <div class="detail-row">
-          <span class="detail-label">Registration ID:</span>
-          <span class="detail-value">${user.registrationId}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Email:</span>
-          <span class="detail-value">${user.email}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Mobile:</span>
-          <span class="detail-value">${user.mobile}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">College:</span>
-          <span class="detail-value">${user.college}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Category:</span>
-          <span class="detail-value">${user.category}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Activities:</span>
-          <span class="detail-value">${user.subCategory?.join(', ') || 'N/A'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Pass Type:</span>
-          <span class="detail-value">${user.passName || 'N/A'}</span>
-        </div>
-        ${user.checkInTime ? `
-        <div class="detail-row">
-          <span class="detail-label">Checked In At:</span>
-          <span class="detail-value">${new Date(user.checkInTime).toLocaleString()}</span>
-        </div>
-        ` : ''}
-      `;
+      var rows = [
+        ['Reg ID',    user.registrationId],
+        ['Email',     user.email],
+        ['Mobile',    user.mobile],
+        ['College',   user.college],
+        ['Category',  user.category],
+        ['Activities',(user.subCategory || []).join(', ') || 'N/A'],
+        ['Pass Type', user.passName || 'N/A']
+      ];
+      if (user.checkInTime) rows.push(['Checked In', new Date(user.checkInTime).toLocaleString()]);
 
-      document.getElementById('participantDetails').innerHTML = detailsHTML;
-      document.getElementById('participantInfo').classList.add('active');
+      document.getElementById('participantDetails').innerHTML = rows.map(function(r) {
+        return '<div class="p-row"><span class="p-key">' + esc(r[0]) + '</span><span class="p-val">' + esc(String(r[1])) + '</span></div>';
+      }).join('');
 
-      // Update button state
-      const checkInBtn = document.getElementById('checkInBtn');
-      if (isCheckedIn) {
-        checkInBtn.disabled = true;
-        checkInBtn.textContent = '✅ Already Checked In';
-      } else {
-        checkInBtn.disabled = false;
-        checkInBtn.textContent = '✅ Check-In';
-      }
+      var btn = document.getElementById('checkInBtn');
+      btn.disabled    = checked;
+      btn.textContent = checked ? '\u2705 Already Checked In' : '\u2705 Check-In';
     }
 
-    // Check in participant
+    /* Check-in */
     async function checkInParticipant() {
-      if (!currentParticipant) {
-        showAlert('No participant selected', 'error');
-        return;
-      }
-
-      const checkInBtn = document.getElementById('checkInBtn');
-      checkInBtn.disabled = true;
-      checkInBtn.innerHTML = '<div class="spinner"></div>';
-
+      if (!currentParticipant) { showToast('No participant selected', 'w'); return; }
+      var btn = document.getElementById('checkInBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span> Checking in\u2026';
       try {
-        const response = await fetch(`${BACKEND_URL}/api/checkin/checkin`, {
+        var res  = await fetch(BACKEND_URL + '/api/checkin/checkin', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            registrationId: currentParticipant.registrationId,
-            userId: currentParticipant._id
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ registrationId: currentParticipant.registrationId, userId: currentParticipant._id })
         });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          showAlert(`✅ Checked in: ${currentParticipant.fullName}`, 'success');
-          currentParticipant.checkedIn = true;
+        var data = await res.json();
+        if (res.ok) {
+          showToast(currentParticipant.fullName + ' checked in successfully!', 's');
+          currentParticipant.checkedIn   = true;
           currentParticipant.checkInTime = new Date().toISOString();
           displayParticipantInfo(currentParticipant);
-          
           stats.checkedIn++;
           saveStats();
         } else {
-          showAlert(`❌ ${data.msg || 'Check-in failed'}`, 'error');
-          checkInBtn.disabled = false;
-          checkInBtn.textContent = '✅ Check-In';
+          showToast(data.msg || 'Check-in failed', 'e');
+          btn.disabled    = false;
+          btn.textContent = '\u2705 Check-In';
         }
-
       } catch (error) {
-        console.error('Error:', error);
-        showAlert(`Error: ${error.message}`, 'error');
-        checkInBtn.disabled = false;
-        checkInBtn.textContent = '✅ Check-In';
+        console.error('Check-in error:', error);
+        showToast('Error: ' + error.message, 'e');
+        btn.disabled    = false;
+        btn.textContent = '\u2705 Check-In';
       }
     }
 
-    // Clear participant
+    /* Clear */
     function clearParticipant() {
       currentParticipant = null;
       document.getElementById('participantInfo').classList.remove('active');
-      document.getElementById('qrInput').value = '';
+      document.getElementById('qrInput').value     = '';
       document.getElementById('manualRegId').value = '';
     }
 
-    // Show alert
-    function showAlert(message, type = 'info') {
-      const alert = document.getElementById('alert');
-      alert.textContent = message;
-      alert.className = `alert alert-${type} active`;
-
-      setTimeout(() => {
-        alert.classList.remove('active');
-      }, 5000);
-    }
-
-    // Clear stats
     function clearStats() {
-      if (confirm('Clear all statistics?')) {
-        stats = { total: 0, checkedIn: 0, failed: 0, activity: [] };
-        saveStats();
-        showAlert('Stats cleared', 'success');
-      }
+      if (!confirm('Clear all statistics and activity log?')) return;
+      stats = { total: 0, checkedIn: 0, failed: 0, activity: [] };
+      saveStats();
+      showToast('Stats cleared', 's');
     }
 
-    // Load stats on page load
-    window.addEventListener('load', () => {
-      loadStats();
-      console.log('Backend URL:', BACKEND_URL);
-      console.log('Update BACKEND_URL in the code to match your actual backend!');
-      
-      // Wait for jsQR library to load (give it up to 5 seconds)
-      let libraryCheckAttempts = 0;
-      const maxAttempts = 50; // 5 seconds (50 * 100ms)
-      
-      const checkLibrary = setInterval(() => {
-        libraryCheckAttempts++;
-        
-        if (typeof jsQR !== 'undefined') {
-          clearInterval(checkLibrary);
-          console.log('✅ jsQR library loaded successfully after ' + (libraryCheckAttempts * 100) + 'ms');
-          console.log('📸 Camera scanning available - click "Start Scanner" to begin');
-          showAlert('✅ Check-in app ready! Click "Start Scanner" to begin', 'success');
-          return;
-        }
-        
-        if (libraryCheckAttempts === maxAttempts) {
-          clearInterval(checkLibrary);
-          console.error('❌ jsQR library FAILED to load from CDN');
-          console.error('Attempted to load from: cdnjs.cloudflare.com and unpkg');
-          console.warn('QR scanner will not work. You can still use Manual entry.');
-          showAlert('⚠️ QR Scanner loading issue - Use Manual entry tab (📝)', 'error');
-        }
-      }, 100);
-      
-      // Check if browser supports getUserMedia
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('❌ Your browser does not support camera access');
-        showAlert('⚠️ Camera not supported. Use Manual tab.', 'error');
-      } else {
-        console.log('✅ Camera API supported');
-      }
-    });
+    /* Toast notifications */
+    var TOAST_ICONS = { s: '\u2705', e: '\u274C', i: '\u2139\uFE0F', w: '\u26A0\uFE0F' };
 
-    // Test backend connection
+    function showToast(message, type, duration) {
+      if (!type) type = 'i';
+      if (!duration) duration = 5000;
+      var container = document.getElementById('toastContainer');
+      var toast = document.createElement('div');
+      toast.className = 'toast toast-' + type;
+      toast.innerHTML =
+        '<span class="toast-ico">' + (TOAST_ICONS[type] || '\u2139\uFE0F') + '</span>' +
+        '<span class="toast-msg">' + esc(message) + '</span>' +
+        '<button class="toast-close" onclick="this.parentElement.remove()">\u2715</button>';
+      container.appendChild(toast);
+      setTimeout(function() {
+        toast.classList.add('out');
+        toast.addEventListener('animationend', function() { toast.remove(); }, { once: true });
+      }, duration);
+    }
+
+    /* Legacy alias */
+    function showAlert(msg, type) {
+      showToast(msg, type === 'success' ? 's' : type === 'error' ? 'e' : 'i');
+    }
+
+    /* Connection status */
+    function setConnStatus(online, label) {
+      var dot = document.getElementById('connDot');
+      var lbl = document.getElementById('connLabel');
+      dot.className   = 'conn-dot ' + (online ? 'online' : 'offline');
+      lbl.textContent = label;
+    }
+
+    /* Test backend */
     async function testBackendConnection() {
+      setConnStatus(false, 'Testing\u2026');
       try {
-        showAlert('Testing backend connection...', 'info');
-        
-        const response = await fetch(`${BACKEND_URL}/api/checkin/stats`);
-        const data = await response.json();
-        
-        console.log('✅ Backend connection successful:', data);
-        showAlert(`✅ Backend OK! Total: ${data.total}, Checked in: ${data.checkedIn}`, 'success');
+        var res  = await fetch(BACKEND_URL + '/api/checkin/stats');
+        var data = await res.json();
+        setConnStatus(true, 'Online');
+        showToast('Backend OK \u2014 Total: ' + data.total + ', Checked in: ' + data.checkedIn, 's');
+        console.log('Backend:', data);
       } catch (error) {
-        console.error('❌ Backend connection failed:', error);
-        showAlert(`❌ Cannot reach backend at ${BACKEND_URL}`, 'error');
+        setConnStatus(false, 'Offline');
+        showToast('Cannot reach backend at ' + BACKEND_URL, 'e');
+        console.error('Backend error:', error);
       }
     }
 
-    // Test QR detection
+    /* Test QR lib */
     function testQRDetection() {
-      console.log('🧪 Testing QR Detection...');
-      console.log('jsQR available?', typeof jsQR !== 'undefined');
-      
       if (typeof jsQR === 'undefined') {
-        showAlert('❌ jsQR library not loaded yet. Waiting for CDN...', 'error');
-        console.error('jsQR is not defined - trying to reload page');
-        setTimeout(() => {
-          location.reload();
-        }, 2000);
+        showToast('jsQR library not loaded \u2014 try refreshing', 'e');
+        setTimeout(function() { location.reload(); }, 2000);
         return;
       }
-
-      // Test with a sample QR code (black and white pattern)
-      // Create a test canvas with a simple pattern
-      const canvas = document.createElement('canvas');
-      canvas.width = 200;
-      canvas.height = 200;
-      const ctx = canvas.getContext('2d');
-
-      // Fill with white
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, 200, 200);
-
-      // Draw a simple test pattern
-      ctx.fillStyle = 'black';
-      // Finder pattern (top-left)
-      ctx.fillRect(0, 0, 50, 50);
-      ctx.fillRect(10, 10, 30, 30);
-      ctx.fillRect(15, 15, 20, 20);
-
       try {
-        const imageData = ctx.getImageData(0, 0, 200, 200);
-        const code = jsQR(imageData.data, 200, 200, { inversionAttempts: 'attemptBoth' });
-        
-        if (code) {
-          console.log('✅ QR Detection working! Found:', code.data);
-          showAlert('✅ QR Detection library is working!', 'success');
-        } else {
-          console.log('ℹ️ Test pattern not recognized (expected - it\'s not a real QR)');
-          console.log('✅ jsQR library is loaded and ready');
-          showAlert('✅ jsQR library loaded and ready. Try scanning a real QR code.', 'success');
-        }
+        var c = document.createElement('canvas');
+        c.width = c.height = 200;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = 'white'; ctx.fillRect(0,0,200,200);
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,50,50); ctx.fillRect(10,10,30,30); ctx.fillRect(15,15,20,20);
+        jsQR(ctx.getImageData(0,0,200,200).data, 200, 200, { inversionAttempts: 'attemptBoth' });
+        showToast('jsQR library loaded and functional \u2713', 's');
+        console.log('jsQR is working');
       } catch (e) {
-        console.error('❌ QR Detection error:', e);
-        showAlert(`❌ QR Detection error: ${e.message}`, 'error');
+        showToast('QR library error: ' + e.message, 'e');
       }
     }
+
+    /* HTML escape (XSS prevention) */
+    function esc(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(String(str == null ? '' : str)));
+      return d.innerHTML;
+    }
+
+    /* Init */
+    window.addEventListener('load', function() {
+      loadStats();
+      console.log('Backend URL:', BACKEND_URL);
+
+      var attempts = 0;
+      var checkLib = setInterval(function() {
+        attempts++;
+        if (typeof jsQR !== 'undefined') {
+          clearInterval(checkLib);
+          console.log('jsQR loaded after ' + (attempts * 100) + 'ms');
+          showToast('Check-in app ready!', 's', 3000);
+        } else if (attempts >= 50) {
+          clearInterval(checkLib);
+          console.error('jsQR failed to load');
+          showToast('QR scanner unavailable \u2014 use Manual tab', 'w', 8000);
+        }
+      }, 100);
+
+      testBackendConnection();
+    });
   </script>
 </body>
 </html>
