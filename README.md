@@ -301,3 +301,4 @@ Part of TechMNHub - Zonex 2026 Event System
 **Event**: Zonex 2026 (March 7, 2026)  
 **Location**: TechMNHub  
 **System**: Real-time Participant Check-In with QR Code Scanning
+"# checkin-system" 
