@@ -1213,6 +1213,34 @@
       var btn = document.getElementById('checkInBtn');
       btn.disabled    = checked;
       btn.textContent = checked ? '\u2705 Already Checked In' : '\u2705 Check-In';
+
+      // Load recent attendance records for this participant
+      loadAttendance(user._id);
+    }
+
+    async function loadAttendance(userId) {
+      try {
+        var res = await fetch(BACKEND_URL + '/api/checkin/attendance?userId=' + encodeURIComponent(userId) + '&limit=12');
+        if (!res.ok) return;
+        var items = await res.json();
+        if (!items || !items.length) return;
+
+        var html = '<div style="margin-top:12px;padding:12px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);">';
+        html += '<div style="font-weight:700;margin-bottom:8px;color:var(--text-muted);font-size:0.78rem;">Recent Attendance</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+        items.slice(0,12).forEach(function(it){
+          var time = new Date(it.createdAt).toLocaleString();
+          var by = it.markedBy || 'scanner';
+          var sess = it.session ? (' — ' + it.session) : '';
+          html += '<div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text-2);"><div>' + esc(time) + sess + '</div><div style="font-weight:700;color:var(--text);">' + esc(by) + '</div></div>';
+        });
+        html += '</div></div>';
+
+        var details = document.getElementById('participantDetails');
+        details.insertAdjacentHTML('beforeend', html);
+      } catch (e) {
+        console.warn('Failed to load attendance:', e);
+      }
     }
 
     /* Check-in */
