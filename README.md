@@ -32,3 +32,4 @@ Deploy as static site (Cloudflare Pages / Vercel / Netlify).
 - Camera permission is required for QR scanning.
 - Ensure backend CORS includes deployed check-in URL.
 "# checkin-demo" 
+"# checkin-demo" 
