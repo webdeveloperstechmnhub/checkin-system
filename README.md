@@ -33,3 +33,4 @@ Deploy as static site (Cloudflare Pages / Vercel / Netlify).
 - Ensure backend CORS includes deployed check-in URL.
 "# checkin-demo" 
 "# checkin-demo" 
+"# checkin-demo" 
